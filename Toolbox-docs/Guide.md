@@ -1,5 +1,4 @@
 # Kaorios Toolbox Guide
-#V1.0.7
 
 ## Step 1: Download & place system files
 
@@ -57,10 +56,14 @@ hasSystemFeature(Ljava/lang/String;)Z
 
     move-result p0
 
+    :try_start_kousei
     invoke-static {p0, p1}, Lcom/android/internal/util/kaorios/KaoriPropsUtils;->KaoriFeatureBlock(ZLjava/lang/String;)Z
 
     move-result p0
+    :try_end_kaorios
+    .catchall {:try_start_kousei .. :try_end_kaorios} :catchall_kaorios
 
+    :catchall_kaorios
     return p0
 .end method
 
