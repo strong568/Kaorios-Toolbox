@@ -1,7 +1,7 @@
 {
   "com.activision.callofduty.shooter": {
-    "MANUFACTURER": "OnePlus",
-    "MODEL": "PLK110"
+    "MANUFACTURER": "Lenovo",
+    "MODEL": "TB321FU"
   },
   "com.clashoftitansandroid.india": {
     "BRAND": "realme",
@@ -9,18 +9,13 @@
     "MANUFACTURER": "realme",
     "MODEL": "RMX5101"
   },
-  "com.coolapk.market": {
-    "MANUFACTURER": "Nothing",
-    "BRAND": "Nothing",
-    "MODEL": "A024"
-  },
   "com.dts.freefiremax": {
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5070"
+    "MANUFACTURER": "INFINIX",
+    "MODEL": "Infinix X6891"
   },
   "com.dts.freefireth": {
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5070"
+    "MANUFACTURER": "INFINIX",
+    "MODEL": "Infinix X6891"
   },
   "com.ea.gp.apexlegendsmobilefps": {
     "MANUFACTURER": "Xiaomi",
@@ -55,8 +50,8 @@
     "MODEL": "ASUS_AI2201"
   },
   "com.garena.game.codm": {
-    "MANUFACTURER": "OnePlus",
-    "MODEL": "PLK110"
+    "MANUFACTURER": "Lenovo",
+    "MODEL": "TB321FU"
   },
   "com.garena.game.kgid": {
     "BRAND": "realme",
@@ -100,60 +95,6 @@
     "MANUFACTURER": "realme",
     "MODEL": "RMX5101"
   },
-  "com.garena.game.kgms": {
-    "BRAND": "realme",
-    "DEVICE": "Realme 15 Pro 5G",
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5101"
-  },
-  "com.garena.game.kgph": {
-    "BRAND": "realme",
-    "DEVICE": "Realme 15 Pro 5G",
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5101"
-  },
-  "com.garena.game.kgth": {
-    "BRAND": "realme",
-    "DEVICE": "Realme 15 Pro 5G",
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5101"
-  },
-  "com.garena.game.kgtw": {
-    "BRAND": "realme",
-    "DEVICE": "Realme 15 Pro 5G",
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5101"
-  },
-  "com.garena.game.kgvn": {
-    "BRAND": "realme",
-    "DEVICE": "Realme 15 Pro 5G",
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5101"
-  },
-  "com.garena.game.kgvntest": {
-    "BRAND": "realme",
-    "DEVICE": "Realme 15 Pro 5G",
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5101"
-  },
-  "com.garena.game.kgph": {
-    "BRAND": "realme",
-    "DEVICE": "Realme 15 Pro 5G",
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5101"
-  },
-  "com.garena.game.kgth": {
-    "BRAND": "realme",
-    "DEVICE": "Realme 15 Pro 5G",
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5101"
-  },
-  "com.garena.game.kgms": {
-    "BRAND": "realme",
-    "DEVICE": "Realme 15 Pro 5G",
-    "MANUFACTURER": "realme",
-    "MODEL": "RMX5101"
-  },
   "com.levelinfinite.aov": {
     "BRAND": "realme",
     "DEVICE": "Realme 15 Pro 5G",
@@ -176,16 +117,12 @@
     "MODEL": "ASUS_AI2201"
   },
   "com.mobile.legends": {
-    "MANUFACTURER": "OnePlus",
-    "MODEL": "PLK110"
+    "MANUFACTURER": "Lenovo",
+    "MODEL": "TB321FU"
   },
   "com.mobilelegends.mi": {
-    "MANUFACTURER": "ZTE",
-    "BRAND": "nubia",
-    "MODEL": "NX769J",
-    "DEVICE": "REDMAGIC 9 Pro",
-    "PRODUCT": "NX769J",
-    "FINGERPRINT": "nubia/NX769J/NX769J:14/UKQ1.230917.001/20240813.173312:user/release-keys"
+    "MANUFACTURER": "Lenovo",
+    "MODEL": "TB321FU"
   },
   "com.netease.lztgglobal": {
     "MANUFACTURER": "OnePlus",
@@ -297,10 +234,6 @@
     "PRODUCT": "NX769J",
     "FINGERPRINT": "nubia/NX769J/NX769J:14/UKQ1.230917.001/20240813.173312:user/release-keys"
   },
-  "com.supercell.clashofclans": {
-    "MANUFACTURER": "Xiaomi",
-    "MODEL": "2107113SI"
-  },
   "com.tencent.aovindia": {
     "BRAND": "realme",
     "DEVICE": "Realme 15 Pro 5G",
@@ -351,11 +284,6 @@
     "MANUFACTURER": "realme",
     "MODEL": "RMX5101"
   },
-  "com.tencent.qqlite": {
-    "MANUFACTURER": "Xiaomi",
-    "BRAND": "Xiaomi",
-    "MODEL": "23046RP50C"
-  },
   "com.tencent.tmgp.cf": {
     "MANUFACTURER": "NUBIA",
     "BRAND": "NUBIA",
@@ -392,8 +320,8 @@
     "PRODUCT": "PLK110"
   },
   "com.tencent.tmgp.kr.codm": {
-    "MANUFACTURER": "OnePlus",
-    "MODEL": "PLK110"
+    "MANUFACTURER": "Lenovo",
+    "MODEL": "TB321FU"
   },
   "com.tencent.tmgp.pubgmhd": {
     "MANUFACTURER": "OnePlus",
@@ -416,25 +344,13 @@
     "DEVICE": "PLK110",
     "PRODUCT": "PLK110"
   },
-  "com.tencent.tmgp.supercell.clashofclans": {
-    "MANUFACTURER": "OnePlus",
-    "BRAND": "OnePlus",
-    "MODEL": "PLK110",
-    "DEVICE": "PLK110",
-    "PRODUCT": "PLK110"
-  },
-  "com.tencent.mobileqq": {
-    "MANUFACTURER": "Xiaomi",
-    "BRAND": "Xiaomi",
-    "MODEL": "23046RP50C"
-  },
   "com.vng.codmvn": {
-    "MANUFACTURER": "OnePlus",
-    "MODEL": "PLK110"
+    "MANUFACTURER": "Lenovo",
+    "MODEL": "TB321FU"
   },
   "com.vng.mlbbvn": {
-    "MANUFACTURER": "OnePlus",
-    "MODEL": "PLK110"
+    "MANUFACTURER": "Lenovo",
+    "MODEL": "TB321FU"
   },
   "com.vng.pubgmobile": {
     "MANUFACTURER": "OnePlus",
@@ -443,11 +359,12 @@
     "DEVICE": "PLK110",
     "PRODUCT": "PLK110"
   },
-  "flar2.devcheck": {
-    "MANUFACTURER": "VIVO",
-    "BRAND": "VIVO",
-    "MODEL": "V2505A",
-    "DEVICE": "V2505A",
-    "PRODUCT": "V2505A"
+  "com.kurogame.wutheringwaves.global": {
+    "BRAND": "nubia",
+    "DEVICE": "RedMagic 10 Pro",
+    "MANUFACTURER": "ZTE",
+    "MODEL": "NX789J",
+    "FINGERPRINT": "nubia/NX789J-UN/NX789J:15/AQ3A.240812.002/20241212.194919:user/release-keys",
+    "PRODUCT": "NX789J"
   }
 }
