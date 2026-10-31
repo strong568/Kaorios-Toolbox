@@ -34,12 +34,13 @@ jobs:
           import os
           import sys
           import shutil
+          import glob
           import xml.etree.ElementTree as ET
           import requests
           from cryptography import x509
           from cryptography.hazmat.backends import default_backend
 
-          # 1. Danh sách các URL đơn lẻ (đã chuyển sang định dạng RAW)
+          # 1. Danh sách các URL đơn lẻ bên ngoài (dạng raw)
           SINGLE_SOURCES = [
               ("PixelLineage_keybox.xml", "https://raw.githubusercontent.com/PixelLineage/res/main/certified_bundle/keybox.xml"),
               ("loonage_keybox.xml", "https://raw.githubusercontent.com/loonage/ota/los-23/spoofify/keybox.xml"),
@@ -51,7 +52,7 @@ jobs:
               ("AresOS_keybox.xml", "https://raw.githubusercontent.com/AresOS-AOSP/.github/main/profile/keybox.xml"),
           ]
 
-          # 2. Tải Google Attestation CRL
+          # 2. Tải danh sách Google CRL
           CRL_URL = "https://android.googleapis.com/attestation/status"
           print("[*] Đang tải Google Attestation CRL...")
           try:
@@ -65,7 +66,7 @@ jobs:
               sys.exit(1)
 
           def is_keybox_valid(xml_content):
-              """Kiểm tra certificate trong keybox XML xem có bị revoked không."""
+              """Kiểm tra certificate trong keybox XML xem có bị Google revoked không."""
               try:
                   root = ET.fromstring(xml_content)
                   certs = root.findall(".//Certificate")
@@ -86,9 +87,28 @@ jobs:
               except Exception as err:
                   return False, f"Lỗi parse: {err}"
 
-          valid_keyboxes = []
+          valid_keyboxes = {}
 
-          # 3. Quét các URL đơn lẻ bổ sung
+          # 3. Quét và kiểm tra các keybox HIỆN CÓ trong chính repo này (Toolbox-data/Keybox/)
+          local_dir = os.path.join("Toolbox-data", "Keybox")
+          print("\n[*] Đang kiểm tra các keybox hiện có sẵn trong repo...")
+          if os.path.exists(local_dir):
+              for fpath in glob.glob(os.path.join(local_dir, "*.xml")):
+                  fname = os.path.basename(fpath)
+                  print(f"--> Kiểm tra file nội bộ: {fname}")
+                  try:
+                      with open(fpath, "r", encoding="utf-8") as f:
+                          content = f.read()
+                      is_valid, msg = is_keybox_valid(content)
+                      if is_valid:
+                          print(f"    [+] VẪN CÒN STRONG: {msg}")
+                          valid_keyboxes[fname] = content
+                      else:
+                          print(f"    [-] ĐÃ CHẾT / REVOKED -> SẼ BỊ LOẠI BỎ: {msg}")
+                  except Exception as e:
+                      print(f"    [!] Lỗi đọc file {fname}: {e}")
+
+          # 4. Quét các URL đơn lẻ bên ngoài
           print("\n[*] Đang kiểm tra danh sách nguồn đơn lẻ...")
           for fname, url in SINGLE_SOURCES:
               print(f"--> Kiểm tra nguồn: {fname}")
@@ -98,7 +118,7 @@ jobs:
                       is_valid, msg = is_keybox_valid(res.text)
                       if is_valid:
                           print(f"    [+] STRONG: {msg}")
-                          valid_keyboxes.append((fname, res.text))
+                          valid_keyboxes[fname] = res.text
                       else:
                           print(f"    [-] LOẠI: {msg}")
                   else:
@@ -106,7 +126,7 @@ jobs:
               except Exception as e:
                   print(f"    [!] Lỗi kết nối: {e}")
 
-          # 4. Quét thư mục IBDump/IBStrong/Keybox
+          # 5. Quét thư mục IBDump/IBStrong/Keybox
           print("\n[*] Đang kiểm tra thư mục IBDump/IBStrong/Keybox...")
           API_URL = "https://api.github.com/repos/IBDump/IBStrong/contents/Keybox"
           headers = {}
@@ -123,13 +143,14 @@ jobs:
                       if not fname.endswith(".xml") or not download_url:
                           continue
 
+                      dest_name = f"IBStrong_{fname}"
                       print(f"--> Kiểm tra IBDump: {fname}")
                       f_res = requests.get(download_url, timeout=15)
                       if f_res.status_code == 200:
                           is_valid, msg = is_keybox_valid(f_res.text)
                           if is_valid:
                               print(f"    [+] STRONG: {msg}")
-                              valid_keyboxes.append((f"IBStrong_{fname}", f_res.text))
+                              valid_keyboxes[dest_name] = f_res.text
                           else:
                               print(f"    [-] LOẠI: {msg}")
               else:
@@ -137,29 +158,34 @@ jobs:
           except Exception as e:
               print(f"[!] Lỗi khi quét IBDump: {e}")
 
-          # 5. Lưu kết quả vào Toolbox-data/Keybox/
+          # 6. Dọn dẹp thư mục cũ và chỉ ghi lại các keybox còn STRONG
           target_dir = os.path.join("Toolbox-data", "Keybox")
           if os.path.exists(target_dir):
               shutil.rmtree(target_dir)
           os.makedirs(target_dir, exist_ok=True)
 
           if not valid_keyboxes:
-              print("\n[!] Không có keybox nào hợp lệ tại thời điểm hiện tại.")
+              print("\n[!] Không còn bất kỳ keybox nào sống sót!")
+              # Nếu muốn xóa luôn file fallback khi tất cả đều die:
+              fallback = os.path.join("Toolbox-data", "Keybox.xml")
+              if os.path.exists(fallback):
+                  os.remove(fallback)
               sys.exit(0)
 
-          for fname, content in valid_keyboxes:
+          for fname, content in valid_keyboxes.items():
               fpath = os.path.join(target_dir, fname)
               with open(fpath, "w", encoding="utf-8") as f:
                   f.write(content)
-              print(f"[✓] Đã lưu: {fpath}")
+              print(f"[✓] Đã giữ lại/thêm mới: {fpath}")
 
-          # Lưu keybox đầu tiên làm fallback tại Toolbox-data/Keybox.xml
+          # Cập nhật file fallback Keybox.xml bằng một file còn sống
+          first_key = next(iter(valid_keyboxes))
           default_file = os.path.join("Toolbox-data", "Keybox.xml")
           with open(default_file, "w", encoding="utf-8") as f:
-              f.write(valid_keyboxes[0][1])
-          print(f"[✓] Đã cập nhật file mặc định: {default_file} (từ {valid_keyboxes[0][0]})")
+              f.write(valid_keyboxes[first_key])
+          print(f"[✓] Đã cập nhật file mặc định: {default_file} (từ {first_key})")
 
-          print(f"\n[Summary] Đã lưu thành công {len(valid_keyboxes)} keybox còn STRONG.")
+          print(f"\n[Summary] Tổng cộng {len(valid_keyboxes)} keybox còn STRONG được lưu trữ.")
           EOF
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -169,23 +195,15 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 1. Đưa các thay đổi vào staging
-          git add Toolbox-data/
+          # Đưa toàn bộ thư mục Toolbox-data vào staging
+          git add -A Toolbox-data/
 
-          # 2. Kiểm tra nếu không có gì mới thì bỏ qua
+          # Kiểm tra nếu không có thay đổi
           if git diff --staged --quiet; then
             echo "Dữ liệu không có thay đổi mới."
             exit 0
           fi
 
-          # 3. Tạo commit cục bộ
-          git commit -m "Auto sync: Cập nhật các Keybox còn STRONG từ tất cả nguồn"
-
-          # 4. Kéo các commit mới nhất trên remote về và giải quyết xung đột (nếu có)
+          git commit -m "Auto sync: Lọc bỏ keybox chết, cập nhật danh sách STRONG"
           git pull --rebase -X theirs origin main
-
-          # 5. Đẩy lên nhánh main
           git push origin main
-
-
-          
