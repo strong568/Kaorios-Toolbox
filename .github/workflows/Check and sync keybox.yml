@@ -169,14 +169,23 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
+          # 1. Đưa các thay đổi vào staging
           git add Toolbox-data/
 
+          # 2. Kiểm tra nếu không có gì mới thì bỏ qua
           if git diff --staged --quiet; then
             echo "Dữ liệu không có thay đổi mới."
-          else
-            git commit -m "Auto sync: Cập nhật các Keybox còn STRONG từ tất cả nguồn"
-            git pull --rebase origin main
-            git push origin main
+            exit 0
           fi
+
+          # 3. Tạo commit cục bộ
+          git commit -m "Auto sync: Cập nhật các Keybox còn STRONG từ tất cả nguồn"
+
+          # 4. Kéo các commit mới nhất trên remote về và giải quyết xung đột (nếu có)
+          git pull --rebase -X theirs origin main
+
+          # 5. Đẩy lên nhánh main
+          git push origin main
+
 
           
