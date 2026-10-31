@@ -1,0 +1,153 @@
+name: Check & Sync All Strong Keyboxes
+
+on:
+  schedule:
+    # Chạy tự động lúc 00:00 UTC (07:00 sáng giờ VN) mỗi ngày
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-sync-all:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout destination repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install cryptography requests
+
+      - name: Download & check all keyboxes against Google Revocation List
+        run: |
+          python3 - << 'EOF'
+          import os
+          import sys
+          import xml.etree.ElementTree as ET
+          import shutil
+          import requests
+          from cryptography import x509
+          from cryptography.hazmat.backends import default_backend
+
+          # 1. Tải Google Attestation CRL
+          CRL_URL = "https://android.googleapis.com/attestation/status"
+          print("[*] Đang tải Google Attestation CRL...")
+          try:
+              r = requests.get(CRL_URL, timeout=15)
+              r.raise_for_status()
+              crl_data = r.json()
+              revoked_entries = crl_data.get("entries", {})
+              print(f"[+] Tải CRL thành công ({len(revoked_entries)} entry bị revoked).")
+          except Exception as e:
+              print(f"[!] Không thể tải CRL: {e}")
+              sys.exit(1)
+
+          # 2. Lấy danh sách file từ IBDump/IBStrong/Keybox
+          API_URL = "https://api.github.com/repos/IBDump/IBStrong/contents/Keybox"
+          headers = {}
+          gh_token = os.environ.get("GITHUB_TOKEN")
+          if gh_token:
+              headers["Authorization"] = f"token {gh_token}"
+
+          print("[*] Đang lấy danh sách file từ repo nguồn...")
+          res = requests.get(API_URL, headers=headers, timeout=15)
+          if res.status_code != 200:
+              print(f"[!] Lỗi GitHub API: {res.status_code} - {res.text}")
+              sys.exit(1)
+
+          files = res.json()
+          valid_keyboxes = []
+
+          # 3. Quét và kiểm tra từng file XML
+          for item in files:
+              fname = item.get("name", "")
+              if not fname.endswith(".xml"):
+                  continue
+
+              download_url = item.get("download_url")
+              if not download_url:
+                  continue
+
+              print(f"--> Kiểm tra: {fname}")
+              try:
+                  content_res = requests.get(download_url, timeout=15)
+                  if content_res.status_code != 200:
+                      continue
+                  content = content_res.text
+
+                  root = ET.fromstring(content)
+                  certs = root.findall(".//Certificate")
+                  if not certs:
+                      print(f"    [-] Bỏ qua: Không tìm thấy thẻ Certificate")
+                      continue
+
+                  # Lấy Leaf Certificate (thường là cert đầu tiên trong chuỗi)
+                  cert_pem = certs[0].text.strip()
+                  if not cert_pem.startswith("-----BEGIN"):
+                      cert_pem = f"-----BEGIN CERTIFICATE-----\n{cert_pem}\n-----END CERTIFICATE-----"
+
+                  parsed_cert = x509.load_pem_x509_certificate(cert_pem.encode(), default_backend())
+                  serial_hex = format(parsed_cert.serial_number, 'x').lower()
+
+                  if serial_hex in revoked_entries:
+                      status = revoked_entries[serial_hex].get("reason", "REVOKED")
+                      print(f"    [-] REVOKED: Serial {serial_hex} ({status})")
+                  else:
+                      print(f"    [+] VALID (STRONG): Serial {serial_hex} chưa bị thu hồi!")
+                      valid_keyboxes.append((fname, content))
+              except Exception as e:
+                  print(f"    [!] Lỗi phân tích file {fname}: {e}")
+
+          # 4. Ghi toàn bộ keybox hợp lệ vào thư mục Toolbox-data/Keybox/
+          target_dir = os.path.join("Toolbox-data", "Keybox")
+          
+          # Dọn sạch thư mục đích trước khi ghi để loại bỏ các keybox đã bị die ở lần chạy trước
+          if os.path.exists(target_dir):
+              shutil.rmtree(target_dir)
+          os.makedirs(target_dir, exist_ok=True)
+
+          if not valid_keyboxes:
+              print("[!] CẢNH BÁO: Không có keybox nào còn sống tại thời điểm kiểm tra!")
+              sys.exit(0)
+
+          for fname, content in valid_keyboxes:
+              fpath = os.path.join(target_dir, fname)
+              with open(fpath, "w", encoding="utf-8") as f:
+                  f.write(content)
+              print(f"[✓] Đã lưu: {fpath}")
+
+          # Tạo 1 bản sao mặc định ra Toolbox-data/keybox.xml
+          default_file = os.path.join("Toolbox-data", "Keybox.xml")
+          with open(default_file, "w", encoding="utf-8") as f:
+              f.write(valid_keyboxes[0][1])
+          print(f"[✓] Đã tạo file fallback mặc định: {default_file} (từ {valid_keyboxes[0][0]})")
+          print(f"\n[Summary] Tổng cộng {len(valid_keyboxes)} keybox còn STRONG.")
+          EOF
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add Toolbox-data/
+
+          if git diff --staged --quiet; then
+            echo "Không có thay đổi mới."
+          else
+            git commit -m "Auto sync: Cập nhật danh sách toàn bộ Keybox STRONG từ IBDump/IBStrong"
+            git push origin main
+          fi
+          
