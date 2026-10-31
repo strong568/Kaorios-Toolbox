@@ -175,6 +175,8 @@ jobs:
             echo "Dữ liệu không có thay đổi mới."
           else
             git commit -m "Auto sync: Cập nhật các Keybox còn STRONG từ tất cả nguồn"
+            git pull --rebase origin main
             git push origin main
           fi
+
           
