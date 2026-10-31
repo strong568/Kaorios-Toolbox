@@ -1,8 +1,7 @@
-name: Check & Sync All Strong Keyboxes
+name: Check & Sync All strong Keybox Sources
 
 on:
   schedule:
-    # Chạy tự động lúc 00:00 UTC (07:00 sáng giờ VN) mỗi ngày
     - cron: '0 0 * * *'
   workflow_dispatch:
 
@@ -10,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  check-and-sync-all:
+  check-and-sync:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,18 +28,30 @@ jobs:
         run: |
           pip install cryptography requests
 
-      - name: Download & check all keyboxes against Google Revocation List
+      - name: Download & verify keyboxes against Google Revocation List
         run: |
           python3 - << 'EOF'
           import os
           import sys
-          import xml.etree.ElementTree as ET
           import shutil
+          import xml.etree.ElementTree as ET
           import requests
           from cryptography import x509
           from cryptography.hazmat.backends import default_backend
 
-          # 1. Tải Google Attestation CRL
+          # 1. Danh sách các URL đơn lẻ (đã chuyển sang định dạng RAW)
+          SINGLE_SOURCES = [
+              ("PixelLineage_keybox.xml", "https://raw.githubusercontent.com/PixelLineage/res/main/certified_bundle/keybox.xml"),
+              ("loonage_keybox.xml", "https://raw.githubusercontent.com/loonage/ota/los-23/spoofify/keybox.xml"),
+              ("PallabKumarS_keybox.xml", "https://raw.githubusercontent.com/PallabKumarS/android-mods/main/modules/playintegrity-trickystore-aio/keybox.xml"),
+              ("EvolutionX_keybox.xml", "https://git.evolution-x.org/EvoX/keybox/raw/branch/main/keybox.xml"),
+              ("Sul6666_key.xml", "https://raw.githubusercontent.com/Sul6666/msup/main/key.xml"),
+              ("zuri1503_keybox.xml", "https://raw.githubusercontent.com/zuri1503/Toolbox-Database/main/keybox.xml"),
+              ("lucnguyen06_keybox.xml", "https://raw.githubusercontent.com/lucnguyen06/keybox/main/keybox/keybox.xml"),
+              ("AresOS_keybox.xml", "https://raw.githubusercontent.com/AresOS-AOSP/.github/main/profile/keybox.xml"),
+          ]
+
+          # 2. Tải Google Attestation CRL
           CRL_URL = "https://android.googleapis.com/attestation/status"
           print("[*] Đang tải Google Attestation CRL...")
           try:
@@ -48,51 +59,19 @@ jobs:
               r.raise_for_status()
               crl_data = r.json()
               revoked_entries = crl_data.get("entries", {})
-              print(f"[+] Tải CRL thành công ({len(revoked_entries)} entry bị revoked).")
+              print(f"[+] Tải CRL thành công ({len(revoked_entries)} serial bị revoked).")
           except Exception as e:
-              print(f"[!] Không thể tải CRL: {e}")
+              print(f"[!] Không thể tải Google CRL: {e}")
               sys.exit(1)
 
-          # 2. Lấy danh sách file từ IBDump/IBStrong/Keybox
-          API_URL = "https://api.github.com/repos/IBDump/IBStrong/contents/Keybox"
-          headers = {}
-          gh_token = os.environ.get("GITHUB_TOKEN")
-          if gh_token:
-              headers["Authorization"] = f"token {gh_token}"
-
-          print("[*] Đang lấy danh sách file từ repo nguồn...")
-          res = requests.get(API_URL, headers=headers, timeout=15)
-          if res.status_code != 200:
-              print(f"[!] Lỗi GitHub API: {res.status_code} - {res.text}")
-              sys.exit(1)
-
-          files = res.json()
-          valid_keyboxes = []
-
-          # 3. Quét và kiểm tra từng file XML
-          for item in files:
-              fname = item.get("name", "")
-              if not fname.endswith(".xml"):
-                  continue
-
-              download_url = item.get("download_url")
-              if not download_url:
-                  continue
-
-              print(f"--> Kiểm tra: {fname}")
+          def is_keybox_valid(xml_content):
+              """Kiểm tra certificate trong keybox XML xem có bị revoked không."""
               try:
-                  content_res = requests.get(download_url, timeout=15)
-                  if content_res.status_code != 200:
-                      continue
-                  content = content_res.text
-
-                  root = ET.fromstring(content)
+                  root = ET.fromstring(xml_content)
                   certs = root.findall(".//Certificate")
                   if not certs:
-                      print(f"    [-] Bỏ qua: Không tìm thấy thẻ Certificate")
-                      continue
+                      return False, "Không có thẻ Certificate"
 
-                  # Lấy Leaf Certificate (thường là cert đầu tiên trong chuỗi)
                   cert_pem = certs[0].text.strip()
                   if not cert_pem.startswith("-----BEGIN"):
                       cert_pem = f"-----BEGIN CERTIFICATE-----\n{cert_pem}\n-----END CERTIFICATE-----"
@@ -102,23 +81,70 @@ jobs:
 
                   if serial_hex in revoked_entries:
                       status = revoked_entries[serial_hex].get("reason", "REVOKED")
-                      print(f"    [-] REVOKED: Serial {serial_hex} ({status})")
-                  else:
-                      print(f"    [+] VALID (STRONG): Serial {serial_hex} chưa bị thu hồi!")
-                      valid_keyboxes.append((fname, content))
-              except Exception as e:
-                  print(f"    [!] Lỗi phân tích file {fname}: {e}")
+                      return False, f"Revoked (Serial: {serial_hex}, Lý do: {status})"
+                  return True, f"Valid (Serial: {serial_hex})"
+              except Exception as err:
+                  return False, f"Lỗi parse: {err}"
 
-          # 4. Ghi toàn bộ keybox hợp lệ vào thư mục Toolbox-data/Keybox/
+          valid_keyboxes = []
+
+          # 3. Quét các URL đơn lẻ bổ sung
+          print("\n[*] Đang kiểm tra danh sách nguồn đơn lẻ...")
+          for fname, url in SINGLE_SOURCES:
+              print(f"--> Kiểm tra nguồn: {fname}")
+              try:
+                  res = requests.get(url, timeout=15)
+                  if res.status_code == 200:
+                      is_valid, msg = is_keybox_valid(res.text)
+                      if is_valid:
+                          print(f"    [+] STRONG: {msg}")
+                          valid_keyboxes.append((fname, res.text))
+                      else:
+                          print(f"    [-] LOẠI: {msg}")
+                  else:
+                      print(f"    [!] Tải thất bại (HTTP {res.status_code})")
+              except Exception as e:
+                  print(f"    [!] Lỗi kết nối: {e}")
+
+          # 4. Quét thư mục IBDump/IBStrong/Keybox
+          print("\n[*] Đang kiểm tra thư mục IBDump/IBStrong/Keybox...")
+          API_URL = "https://api.github.com/repos/IBDump/IBStrong/contents/Keybox"
+          headers = {}
+          gh_token = os.environ.get("GITHUB_TOKEN")
+          if gh_token:
+              headers["Authorization"] = f"token {gh_token}"
+
+          try:
+              res = requests.get(API_URL, headers=headers, timeout=15)
+              if res.status_code == 200:
+                  for item in res.json():
+                      fname = item.get("name", "")
+                      download_url = item.get("download_url")
+                      if not fname.endswith(".xml") or not download_url:
+                          continue
+
+                      print(f"--> Kiểm tra IBDump: {fname}")
+                      f_res = requests.get(download_url, timeout=15)
+                      if f_res.status_code == 200:
+                          is_valid, msg = is_keybox_valid(f_res.text)
+                          if is_valid:
+                              print(f"    [+] STRONG: {msg}")
+                              valid_keyboxes.append((f"IBStrong_{fname}", f_res.text))
+                          else:
+                              print(f"    [-] LOẠI: {msg}")
+              else:
+                  print(f"[!] Không thể đọc repo IBDump (HTTP {res.status_code})")
+          except Exception as e:
+              print(f"[!] Lỗi khi quét IBDump: {e}")
+
+          # 5. Lưu kết quả vào Toolbox-data/Keybox/
           target_dir = os.path.join("Toolbox-data", "Keybox")
-          
-          # Dọn sạch thư mục đích trước khi ghi để loại bỏ các keybox đã bị die ở lần chạy trước
           if os.path.exists(target_dir):
               shutil.rmtree(target_dir)
           os.makedirs(target_dir, exist_ok=True)
 
           if not valid_keyboxes:
-              print("[!] CẢNH BÁO: Không có keybox nào còn sống tại thời điểm kiểm tra!")
+              print("\n[!] Không có keybox nào hợp lệ tại thời điểm hiện tại.")
               sys.exit(0)
 
           for fname, content in valid_keyboxes:
@@ -127,12 +153,13 @@ jobs:
                   f.write(content)
               print(f"[✓] Đã lưu: {fpath}")
 
-          # Tạo 1 bản sao mặc định ra Toolbox-data/keybox.xml
+          # Lưu keybox đầu tiên làm fallback tại Toolbox-data/Keybox.xml
           default_file = os.path.join("Toolbox-data", "Keybox.xml")
           with open(default_file, "w", encoding="utf-8") as f:
               f.write(valid_keyboxes[0][1])
-          print(f"[✓] Đã tạo file fallback mặc định: {default_file} (từ {valid_keyboxes[0][0]})")
-          print(f"\n[Summary] Tổng cộng {len(valid_keyboxes)} keybox còn STRONG.")
+          print(f"[✓] Đã cập nhật file mặc định: {default_file} (từ {valid_keyboxes[0][0]})")
+
+          print(f"\n[Summary] Đã lưu thành công {len(valid_keyboxes)} keybox còn STRONG.")
           EOF
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -145,9 +172,9 @@ jobs:
           git add Toolbox-data/
 
           if git diff --staged --quiet; then
-            echo "Không có thay đổi mới."
+            echo "Dữ liệu không có thay đổi mới."
           else
-            git commit -m "Auto sync: Cập nhật danh sách toàn bộ Keybox STRONG từ IBDump/IBStrong"
+            git commit -m "Auto sync: Cập nhật các Keybox còn STRONG từ tất cả nguồn"
             git push origin main
           fi
           
