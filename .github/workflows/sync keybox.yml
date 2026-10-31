@@ -1,0 +1,53 @@
+name: Sync Keybox
+
+on:
+  schedule:
+    # Chạy tự động mỗi ngày vào lúc 00:00 UTC (07:00 sáng giờ Việt Nam)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Cho phép bấm chạy thủ công qua tab Actions
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Download latest Keybox
+        run: |
+          mkdir -p Toolbox-data
+          
+          # Tải file keybox thô từ Evolution-X
+          SOURCE_URL="https://git.evolution-x.org/EvoX/keybox/raw/branch/main/keybox.xml"
+          curl -sSL "$SOURCE_URL" -o Toolbox-data/Keybox.xml.new
+
+          # Kiểm tra tính hợp lệ tối thiểu của file tải về (không rỗng và đúng cấu trúc XML)
+          if [ ! -s Toolbox-data/Keybox.xml.new ] || ! grep -q "<?xml" Toolbox-data/Keybox.xml.new; then
+            echo "::error::Tải file keybox thất bại hoặc file không hợp lệ."
+            rm -f Toolbox-data/Keybox.xml.new
+            exit 1
+          fi
+
+          mv Toolbox-data/Keybox.xml.new Toolbox-data/Keybox.xml
+
+      - name: Check for changes and commit
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add Toolbox-data/Keybox.xml
+
+          if git diff --staged --quiet; then
+            echo "Keybox không có thay đổi mới."
+          else
+            git commit -m "Auto sync: Cập nhật Keybox.xml từ Evolution-X"
+            git push origin main
+          fi
+          
