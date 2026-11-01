@@ -37,11 +37,31 @@ jobs:
           import glob
           import xml.etree.ElementTree as ET
           import requests
+          import base64
           from cryptography import x509
           from cryptography.hazmat.backends import default_backend
 
-          # 1. Danh sách các URL đơn lẻ bên ngoài (dạng raw) - Đã thêm các nguồn mới
+          # Hàm tự động kiểm tra và giải mã Base64 nếu cần
+          def decode_if_base64(content):
+              content_stripped = content.strip()
+              # Nếu nội dung bắt đầu bằng '<' thì khả năng cao là XML thuần, không cần giải mã
+              if content_stripped.startswith('<'):
+                  return content
+              try:
+                  # Thử giải mã Base64
+                  decoded_bytes = base64.b64decode(content_stripped)
+                  decoded_str = decoded_bytes.decode('utf-8')
+                  # Nếu sau khi giải mã bắt đầu bằng '<' thì trả về XML đã giải mã
+                  if decoded_str.strip().startswith('<'):
+                      return decoded_str
+              except Exception:
+                  pass
+              # Trả về nguyên gốc nếu không phải Base64 hoặc giải mã lỗi
+              return content
+
+          # 1. Danh sách các URL đơn lẻ bên ngoài (dạng raw) - Đã thêm nguồn kezz base64
           SINGLE_SOURCES = [
+              ("soctrungkien_kezz_keybox.xml", "https://raw.githubusercontent.com/soctrungkien/1HzH9Axaj/refs/heads/main/kezz"),
               ("PixelLineage_keybox.xml", "https://raw.githubusercontent.com/PixelLineage/res/main/certified_bundle/keybox.xml"),
               ("loonage_keybox.xml", "https://raw.githubusercontent.com/loonage/ota/los-23/spoofify/keybox.xml"),
               ("PallabKumarS_keybox.xml", "https://raw.githubusercontent.com/PallabKumarS/android-mods/main/modules/playintegrity-trickystore-aio/keybox.xml"),
@@ -103,10 +123,13 @@ jobs:
                   try:
                       with open(fpath, "r", encoding="utf-8") as f:
                           content = f.read()
-                      is_valid, msg = is_keybox_valid(content)
+                      
+                      # Vẫn gọi decode_if_base64 phòng trường hợp file lưu sẵn bị mã hóa
+                      xml_content = decode_if_base64(content)
+                      is_valid, msg = is_keybox_valid(xml_content)
                       if is_valid:
                           print(f"    [+] VẪN CÒN STRONG: {msg}")
-                          valid_keyboxes[fname] = content
+                          valid_keyboxes[fname] = xml_content
                       else:
                           print(f"    [-] ĐÃ CHẾT / REVOKED -> SẼ BỊ LOẠI BỎ: {msg}")
                   except Exception as e:
@@ -119,10 +142,12 @@ jobs:
               try:
                   res = requests.get(url, timeout=15)
                   if res.status_code == 200:
-                      is_valid, msg = is_keybox_valid(res.text)
+                      # Gọi hàm giải mã Base64 tại đây
+                      xml_content = decode_if_base64(res.text)
+                      is_valid, msg = is_keybox_valid(xml_content)
                       if is_valid:
                           print(f"    [+] STRONG: {msg}")
-                          valid_keyboxes[fname] = res.text
+                          valid_keyboxes[fname] = xml_content
                       else:
                           print(f"    [-] LOẠI: {msg}")
                   else:
@@ -151,10 +176,12 @@ jobs:
                       print(f"--> Kiểm tra IBDump: {fname}")
                       f_res = requests.get(download_url, timeout=15)
                       if f_res.status_code == 200:
-                          is_valid, msg = is_keybox_valid(f_res.text)
+                          # Gọi hàm giải mã Base64 tại đây
+                          xml_content = decode_if_base64(f_res.text)
+                          is_valid, msg = is_keybox_valid(xml_content)
                           if is_valid:
                               print(f"    [+] STRONG: {msg}")
-                              valid_keyboxes[dest_name] = f_res.text
+                              valid_keyboxes[dest_name] = xml_content
                           else:
                               print(f"    [-] LOẠI: {msg}")
               else:
@@ -178,7 +205,7 @@ jobs:
           for fname, content in valid_keyboxes.items():
               fpath = os.path.join(target_dir, fname)
               with open(fpath, "w", encoding="utf-8") as f:
-                  f.write(content)
+                  f.write(content) # Sẽ ghi XML bình thường nhờ đã giải mã
               print(f"[✓] Đã giữ lại/thêm mới: {fpath}")
 
           # Cập nhật file fallback Keybox.xml bằng một file còn sống
@@ -205,6 +232,6 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Auto sync: Lọc bỏ keybox chết, cập nhật danh sách STRONG"
+          git commit -m "Auto sync: Lọc bỏ keybox chết, cập nhật danh sách STRONG và hỗ trợ giải mã Base64"
           git pull --rebase -X theirs origin main
           git push origin main
