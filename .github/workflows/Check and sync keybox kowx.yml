@@ -40,7 +40,7 @@ jobs:
           from cryptography import x509
           from cryptography.hazmat.backends import default_backend
 
-          # 1. Danh sách các URL đơn lẻ bên ngoài (dạng raw) - Đã thêm các nguồn mới
+          # 1. Danh sách các URL đơn lẻ bên ngoài (dạng raw)
           SINGLE_SOURCES = [
               ("PixelLineage_keybox.xml", "https://raw.githubusercontent.com/PixelLineage/res/main/certified_bundle/keybox.xml"),
               ("loonage_keybox.xml", "https://raw.githubusercontent.com/loonage/ota/los-23/spoofify/keybox.xml"),
@@ -114,7 +114,7 @@ jobs:
                   except Exception as e:
                       print(f"    [!] Lỗi đọc file {fname}: {e}")
 
-          # 4 Quét các URL đơn lẻ bên ngoài
+          # 4. Quét các URL đơn lẻ bên ngoài
           print("\n[*] Đang kiểm tra danh sách nguồn đơn lẻ...")
           for fname, url in SINGLE_SOURCES:
               print(f"--> Kiểm tra nguồn: {fname}")
@@ -127,15 +127,12 @@ jobs:
                               data = res.json()
                               items = data if isinstance(data, list) else data.get("keyboxes", data.get("data", []))
                               
-                              print( tìm thấy {len(items)} keybox từ kowx712)
+                              print(f"    [+] Tìm thấy {len(items)} keybox từ kowx712")
                               for idx, item in enumerate(items):
-                                  # Lấy ID hoặc URL chi tiết của từng keybox (tùy thuộc vào cấu trúc trả về của API)
                                   kb_id = item.get("id") or item.get("name", f"item_{idx}")
-                                  # Thường các API web sẽ có endpoint chi tiết kiểu /api/keybox/{id} hoặc chứa sẵn nội dung xml
                                   xml_content = item.get("xml") or item.get("content")
                                   
                                   if not xml_content and kb_id:
-                                      # Nếu API trả về danh sách rút gọn, gọi tiếp endpoint chi tiết
                                       detail_url = f"https://keybox.kowx712.cc/api/keybox/{kb_id}"
                                       detail_res = requests.get(detail_url, timeout=10)
                                       if detail_res.status_code == 200:
@@ -164,7 +161,6 @@ jobs:
                       print(f"    [!] Tải thất bại (HTTP {res.status_code})")
               except Exception as e:
                   print(f"    [!] Lỗi kết nối: {e}")
-
 
           # 5. Quét thư mục IBDump/IBStrong/Keybox
           print("\n[*] Đang kiểm tra thư mục IBDump/IBStrong/Keybox...")
