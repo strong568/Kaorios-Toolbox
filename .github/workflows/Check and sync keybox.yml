@@ -61,7 +61,10 @@ jobs:
 
           # 1. Danh sách các URL đơn lẻ bên ngoài (dạng raw) - Đã thêm nguồn kezz base64
           SINGLE_SOURCES = [
-              ("soctrungkien_kezz_keybox.xml", "https://raw.githubusercontent.com/soctrungkien/1HzH9Axaj/refs/heads/main/kezz"),
+              ("Yurii0307_keybox.xml", "https://raw.githubusercontent.com/Yurii0307/yurikey/main/key"),
+              ("evoker_keybox.xml", "https://evoker.qzz.io/key"),
+              ("soctrungkien_kezz_keybox.xml", "https://raw.githubusercontent.com/soctrungkien/1HzH9Axaj/refs/heads/main/kezz"),                          
+              ("GueRapii_keybox.xml", "https://raw.githubusercontent.com/GueRapii/randommodulesfiles/refs/heads/main/file.enc"),
               ("PixelLineage_keybox.xml", "https://raw.githubusercontent.com/PixelLineage/res/main/certified_bundle/keybox.xml"),
               ("loonage_keybox.xml", "https://raw.githubusercontent.com/loonage/ota/los-23/spoofify/keybox.xml"),
               ("PallabKumarS_keybox.xml", "https://raw.githubusercontent.com/PallabKumarS/android-mods/main/modules/playintegrity-trickystore-aio/keybox.xml"),
