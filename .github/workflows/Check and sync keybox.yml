@@ -40,7 +40,7 @@ jobs:
           from cryptography import x509
           from cryptography.hazmat.backends import default_backend
 
-          # 1. Danh sách các URL đơn lẻ bên ngoài (dạng raw)
+          # 1. Danh sách các URL đơn lẻ bên ngoài (dạng raw) - Đã thêm các nguồn mới
           SINGLE_SOURCES = [
               ("PixelLineage_keybox.xml", "https://raw.githubusercontent.com/PixelLineage/res/main/certified_bundle/keybox.xml"),
               ("loonage_keybox.xml", "https://raw.githubusercontent.com/loonage/ota/los-23/spoofify/keybox.xml"),
@@ -50,6 +50,15 @@ jobs:
               ("zuri1503_keybox.xml", "https://raw.githubusercontent.com/zuri1503/Toolbox-Database/main/keybox.xml"),
               ("lucnguyen06_keybox.xml", "https://raw.githubusercontent.com/lucnguyen06/keybox/main/keybox/keybox.xml"),
               ("AresOS_keybox.xml", "https://raw.githubusercontent.com/AresOS-AOSP/.github/main/profile/keybox.xml"),
+              ("davidepalma_keybox.xml", "https://www.davidepalma.it/pib/keybox.xml"),
+              ("dare_devil_ex_keybox.xml", "https://raw.githubusercontent.com/dare-devil-ex/keyboxxBot/main/keybox.xml"),
+              ("dpejoh_catalog.xml", "https://rawbin.dpejoh.com/catalog"),
+              ("Yurii0307_key", "https://raw.githubusercontent.com/Yurii0307/yurikey/main/key"),
+              ("evoker_key", "https://evoker.qzz.io/key"),
+              ("kowx712_keyboxes.xml", "https://keybox.kowx712.cc/api/keyboxes"),
+              ("GreyElaina_kb_b.xml", "https://gist.githubusercontent.com/GreyElaina/2401596f3b8a01f8602768ad5221e2fd/raw/kb_b.xml"),
+              ("mywoopies_keystore.xml", "https://raw.githubusercontent.com/mywoopies/mejson/refs/heads/main/keystore.xml"),
+              ("soctrungkien_kezz", "https://raw.githubusercontent.com/soctrungkien/1HzH9Axaj/main/kezz"),
           ]
 
           # 2. Tải danh sách Google CRL
@@ -166,7 +175,6 @@ jobs:
 
           if not valid_keyboxes:
               print("\n[!] Không còn bất kỳ keybox nào sống sót!")
-              # Nếu muốn xóa luôn file fallback khi tất cả đều die:
               fallback = os.path.join("Toolbox-data", "Keybox.xml")
               if os.path.exists(fallback):
                   os.remove(fallback)
@@ -195,10 +203,8 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Đưa toàn bộ thư mục Toolbox-data vào staging
           git add -A Toolbox-data/
 
-          # Kiểm tra nếu không có thay đổi
           if git diff --staged --quiet; then
             echo "Dữ liệu không có thay đổi mới."
             exit 0
