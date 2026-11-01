@@ -114,35 +114,46 @@ jobs:
                   except Exception as e:
                       print(f"    [!] Lỗi đọc file {fname}: {e}")
 
-          # 4 Quét các URL đơn lẻ bên ngoài (Hỗ trợ cả XML thô và API JSON)
+          # 4 Quét các URL đơn lẻ bên ngoài
           print("\n[*] Đang kiểm tra danh sách nguồn đơn lẻ...")
           for fname, url in SINGLE_SOURCES:
               print(f"--> Kiểm tra nguồn: {fname}")
               try:
                   res = requests.get(url, timeout=15)
                   if res.status_code == 200:
-                      # Kiểm tra nếu đây là API dạng JSON của kowx712
+                      # Xử lý riêng cho trang kowx712 dạng API JSON danh sách
                       if "kowx712.cc" in url:
                           try:
                               data = res.json()
-                              # Tùy thuộc vào cấu trúc JSON của API, giả sử trả về danh sách hoặc một trường chứa nội dung xml/keybox
-                              # Ví dụ nếu API trả về danh sách các object chứa nội dung keybox:
-                              items = data if isinstance(data, list) else data.get("keyboxes", [])
+                              items = data if isinstance(data, list) else data.get("keyboxes", data.get("data", []))
+                              
+                              print( tìm thấy {len(items)} keybox từ kowx712)
                               for idx, item in enumerate(items):
-                                  xml_text = item.get("content") or item.get("xml") or str(item)
-                                  sub_fname = f"kowx712_{idx}.xml"
-                                  is_valid, msg = is_keybox_valid(xml_text)
-                                  if is_valid:
-                                      print(f"    [+] STRONG [{sub_fname}]: {msg}")
-                                      valid_keyboxes[sub_fname] = xml_text
-                                  else:
-                                      print(f"    [-] LOẠI [{sub_fname}]: {msg}")
-                              continue
-                          except Exception as json_err:
-                              print(f"    [!] Lỗi giải mã JSON từ API: {json_err}")
-                              continue
+                                  # Lấy ID hoặc URL chi tiết của từng keybox (tùy thuộc vào cấu trúc trả về của API)
+                                  kb_id = item.get("id") or item.get("name", f"item_{idx}")
+                                  # Thường các API web sẽ có endpoint chi tiết kiểu /api/keybox/{id} hoặc chứa sẵn nội dung xml
+                                  xml_content = item.get("xml") or item.get("content")
+                                  
+                                  if not xml_content and kb_id:
+                                      # Nếu API trả về danh sách rút gọn, gọi tiếp endpoint chi tiết
+                                      detail_url = f"https://keybox.kowx712.cc/api/keybox/{kb_id}"
+                                      detail_res = requests.get(detail_url, timeout=10)
+                                      if detail_res.status_code == 200:
+                                          xml_content = detail_res.text
+                                          
+                                  if xml_content:
+                                      sub_fname = f"kowx712_{kb_id}.xml"
+                                      is_valid, msg = is_keybox_valid(xml_content)
+                                      if is_valid:
+                                          print(f"    [+] STRONG [{sub_fname}]: {msg}")
+                                          valid_keyboxes[sub_fname] = xml_content
+                                      else:
+                                          print(f"    [-] LOẠI [{sub_fname}]: {msg}")
+                          except Exception as e:
+                              print(f"    [!] Lỗi phân tích API kowx712: {e}")
+                          continue
 
-                      # Xử lý cho các nguồn XML thô thông thường
+                      # Xử lý các nguồn XML thô khác như bình thường
                       is_valid, msg = is_keybox_valid(res.text)
                       if is_valid:
                           print(f"    [+] STRONG: {msg}")

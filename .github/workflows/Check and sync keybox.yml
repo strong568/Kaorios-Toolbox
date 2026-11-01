@@ -52,13 +52,8 @@ jobs:
               ("AresOS_keybox.xml", "https://raw.githubusercontent.com/AresOS-AOSP/.github/main/profile/keybox.xml"),
               ("davidepalma_keybox.xml", "https://www.davidepalma.it/pib/keybox.xml"),
               ("dare_devil_ex_keybox.xml", "https://raw.githubusercontent.com/dare-devil-ex/keyboxxBot/main/keybox.xml"),
-              ("dpejoh_catalog.xml", "https://rawbin.dpejoh.com/catalog"),
-              ("Yurii0307_key", "https://raw.githubusercontent.com/Yurii0307/yurikey/main/key"),
-              ("evoker_key", "https://evoker.qzz.io/key"),
-              ("kowx712_keyboxes.xml", "https://keybox.kowx712.cc/api/keyboxes"),
               ("GreyElaina_kb_b.xml", "https://gist.githubusercontent.com/GreyElaina/2401596f3b8a01f8602768ad5221e2fd/raw/kb_b.xml"),
               ("mywoopies_keystore.xml", "https://raw.githubusercontent.com/mywoopies/mejson/refs/heads/main/keystore.xml"),
-              ("soctrungkien_kezz", "https://raw.githubusercontent.com/soctrungkien/1HzH9Axaj/main/kezz"),
           ]
 
           # 2. Tải danh sách Google CRL
