@@ -36,35 +36,81 @@ jobs:
           import shutil
           import glob
           import xml.etree.ElementTree as ET
+          from xml.dom import minidom
           import requests
           import base64
           from cryptography import x509
           from cryptography.hazmat.backends import default_backend
 
+          # Hàm chuẩn hóa XML Keybox (xóa rác, format đẹp)
+          def format_keybox_xml(xml_string):
+              # 1. Tìm thẻ gốc <AndroidAttestation> để bỏ qua các dòng rác (như cảnh báo style)
+              start_idx = xml_string.find('<AndroidAttestation>')
+              if start_idx != -1:
+                  xml_string = xml_string[start_idx:]
+              
+              try:
+                  # 2. Phân tích cú pháp XML
+                  root = ET.fromstring(xml_string)
+                  
+                  # 3. Chuẩn hóa nội dung các thẻ PEM (Private Key, Certificate)
+                  for elem in root.iter():
+                      if elem.text and '-----BEGIN' in elem.text:
+                          # Lấy toàn bộ text, chia thành các phần tử bằng khoảng trắng/xuống dòng
+                          parts = elem.text.split()
+                          if len(parts) >= 3:
+                              # Tái tạo lại chuỗi PEM chuẩn: HEADER, DATA, FOOTER
+                              header = f"{parts[0]} {parts[1]} {parts[2]} {parts[3]} {parts[4]}" # Vd: -----BEGIN EC PRIVATE KEY-----
+                              
+                              # Tìm vị trí bắt đầu của FOOTER (từ -----END)
+                              footer_start_idx = -1
+                              for i, p in enumerate(parts):
+                                  if p == '-----END':
+                                      footer_start_idx = i
+                                      break
+                              
+                              if footer_start_idx != -1:
+                                  footer = " ".join(parts[footer_start_idx:footer_start_idx+5])
+                                  
+                                  # Phần data ở giữa (base64) ghép lại và tự động cắt mỗi 64 ký tự (chuẩn PEM)
+                                  raw_data = "".join(parts[5:footer_start_idx])
+                                  formatted_data = "\n".join([raw_data[i:i+64] for i in range(0, len(raw_data), 64)])
+                                  
+                                  # Gán lại nội dung cho thẻ, bao bọc bởi khoảng trắng xuống dòng
+                                  elem.text = f"\n{header}\n{formatted_data}\n{footer}\n      "
+                  
+                  # 4. Sử dụng minidom để format (pretty print)
+                  rough_string = ET.tostring(root, 'utf-8')
+                  reparsed = minidom.parseString(rough_string)
+                  # Xóa các dòng trắng thừa do minidom tạo ra
+                  pretty_xml = '\n'.join([line for line in reparsed.toprettyxml(indent="  ").split('\n') if line.strip()])
+                  return pretty_xml
+              except Exception as e:
+                  print(f"      [Cảnh báo] Không thể chuẩn hóa định dạng XML: {e}")
+                  # Nếu lỗi chuẩn hóa, trả về xml gốc (đã cắt phần rác phía trên)
+                  return xml_string
+
           # Hàm tự động kiểm tra và giải mã Base64 nếu cần
           def decode_if_base64(content):
               content_stripped = content.strip()
-              # Nếu nội dung bắt đầu bằng '<' thì khả năng cao là XML thuần, không cần giải mã
               if content_stripped.startswith('<'):
                   return content
               try:
-                  # Thử giải mã Base64
                   decoded_bytes = base64.b64decode(content_stripped)
                   decoded_str = decoded_bytes.decode('utf-8')
-                  # Nếu sau khi giải mã bắt đầu bằng '<' thì trả về XML đã giải mã
-                  if decoded_str.strip().startswith('<'):
+                  # Kiểm tra xem có chứa thẻ AndroidAttestation không
+                  if '<AndroidAttestation>' in decoded_str:
                       return decoded_str
               except Exception:
                   pass
-              # Trả về nguyên gốc nếu không phải Base64 hoặc giải mã lỗi
               return content
 
-          # 1. Danh sách các URL đơn lẻ bên ngoài (dạng raw) - Đã thêm nguồn kezz base64
+          # 1. Danh sách các URL đơn lẻ bên ngoài
           SINGLE_SOURCES = [
               ("Yurii0307_keybox.xml", "https://raw.githubusercontent.com/Yurii0307/yurikey/main/key"),
               ("evoker_keybox.xml", "https://evoker.qzz.io/key"),
               ("soctrungkien_kezz_keybox.xml", "https://raw.githubusercontent.com/soctrungkien/1HzH9Axaj/refs/heads/main/kezz"),                          
-              ("GueRapii_keybox.xml", "https://raw.githubusercontent.com/GueRapii/randommodulesfiles/refs/heads/main/file.enc"),
+              ("CollectionByCharlie_keybox.xml", "https://raw.githubusercontent.com/GueRapii/randommodulesfiles/refs/heads/main/file.enc"),
               ("PixelLineage_keybox.xml", "https://raw.githubusercontent.com/PixelLineage/res/main/certified_bundle/keybox.xml"),
               ("loonage_keybox.xml", "https://raw.githubusercontent.com/loonage/ota/los-23/spoofify/keybox.xml"),
               ("PallabKumarS_keybox.xml", "https://raw.githubusercontent.com/PallabKumarS/android-mods/main/modules/playintegrity-trickystore-aio/keybox.xml"),
@@ -92,31 +138,37 @@ jobs:
               print(f"[!] Không thể tải Google CRL: {e}")
               sys.exit(1)
 
-          def is_keybox_valid(xml_content):
-              """Kiểm tra certificate trong keybox XML xem có bị Google revoked không."""
+          def process_xml_content(raw_content):
+              """Giải mã, chuẩn hóa và kiểm tra XML"""
+              # Giải mã base64 nếu cần
+              decoded = decode_if_base64(raw_content)
+              # Chuẩn hóa format
+              formatted_xml = format_keybox_xml(decoded)
+              
+              # Lấy đoạn văn bản thuần tuý để tìm thẻ Certificate cho việc kiểm tra
+              # Tìm chuỗi giữa -----BEGIN CERTIFICATE----- và -----END CERTIFICATE-----
               try:
-                  root = ET.fromstring(xml_content)
-                  certs = root.findall(".//Certificate")
-                  if not certs:
-                      return False, "Không có thẻ Certificate"
-
-                  cert_pem = certs[0].text.strip()
-                  if not cert_pem.startswith("-----BEGIN"):
-                      cert_pem = f"-----BEGIN CERTIFICATE-----\n{cert_pem}\n-----END CERTIFICATE-----"
-
+                  start = formatted_xml.find("-----BEGIN CERTIFICATE-----")
+                  end = formatted_xml.find("-----END CERTIFICATE-----")
+                  if start == -1 or end == -1:
+                      return False, "Không có thẻ Certificate hợp lệ", formatted_xml
+                      
+                  cert_pem = formatted_xml[start:end+25] # 25 là chiều dài "-----END CERTIFICATE-----"
+                  
                   parsed_cert = x509.load_pem_x509_certificate(cert_pem.encode(), default_backend())
                   serial_hex = format(parsed_cert.serial_number, 'x').lower()
 
                   if serial_hex in revoked_entries:
                       status = revoked_entries[serial_hex].get("reason", "REVOKED")
-                      return False, f"Revoked (Serial: {serial_hex}, Lý do: {status})"
-                  return True, f"Valid (Serial: {serial_hex})"
+                      return False, f"Revoked (Serial: {serial_hex}, Lý do: {status})", formatted_xml
+                  return True, f"Valid (Serial: {serial_hex})", formatted_xml
               except Exception as err:
-                  return False, f"Lỗi parse: {err}"
+                  return False, f"Lỗi parse chứng chỉ: {err}", formatted_xml
+
 
           valid_keyboxes = {}
 
-          # 3. Quét và kiểm tra các keybox HIỆN CÓ trong chính repo này (Toolbox-data/Keybox/)
+          # 3. Quét và kiểm tra các keybox HIỆN CÓ trong chính repo này
           local_dir = os.path.join("Toolbox-data", "Keybox")
           print("\n[*] Đang kiểm tra các keybox hiện có sẵn trong repo...")
           if os.path.exists(local_dir):
@@ -127,12 +179,10 @@ jobs:
                       with open(fpath, "r", encoding="utf-8") as f:
                           content = f.read()
                       
-                      # Vẫn gọi decode_if_base64 phòng trường hợp file lưu sẵn bị mã hóa
-                      xml_content = decode_if_base64(content)
-                      is_valid, msg = is_keybox_valid(xml_content)
+                      is_valid, msg, final_xml = process_xml_content(content)
                       if is_valid:
                           print(f"    [+] VẪN CÒN STRONG: {msg}")
-                          valid_keyboxes[fname] = xml_content
+                          valid_keyboxes[fname] = final_xml
                       else:
                           print(f"    [-] ĐÃ CHẾT / REVOKED -> SẼ BỊ LOẠI BỎ: {msg}")
                   except Exception as e:
@@ -145,12 +195,10 @@ jobs:
               try:
                   res = requests.get(url, timeout=15)
                   if res.status_code == 200:
-                      # Gọi hàm giải mã Base64 tại đây
-                      xml_content = decode_if_base64(res.text)
-                      is_valid, msg = is_keybox_valid(xml_content)
+                      is_valid, msg, final_xml = process_xml_content(res.text)
                       if is_valid:
                           print(f"    [+] STRONG: {msg}")
-                          valid_keyboxes[fname] = xml_content
+                          valid_keyboxes[fname] = final_xml
                       else:
                           print(f"    [-] LOẠI: {msg}")
                   else:
@@ -179,12 +227,10 @@ jobs:
                       print(f"--> Kiểm tra IBDump: {fname}")
                       f_res = requests.get(download_url, timeout=15)
                       if f_res.status_code == 200:
-                          # Gọi hàm giải mã Base64 tại đây
-                          xml_content = decode_if_base64(f_res.text)
-                          is_valid, msg = is_keybox_valid(xml_content)
+                          is_valid, msg, final_xml = process_xml_content(f_res.text)
                           if is_valid:
                               print(f"    [+] STRONG: {msg}")
-                              valid_keyboxes[dest_name] = xml_content
+                              valid_keyboxes[dest_name] = final_xml
                           else:
                               print(f"    [-] LOẠI: {msg}")
               else:
@@ -208,7 +254,7 @@ jobs:
           for fname, content in valid_keyboxes.items():
               fpath = os.path.join(target_dir, fname)
               with open(fpath, "w", encoding="utf-8") as f:
-                  f.write(content) # Sẽ ghi XML bình thường nhờ đã giải mã
+                  f.write(content) 
               print(f"[✓] Đã giữ lại/thêm mới: {fpath}")
 
           # Cập nhật file fallback Keybox.xml bằng một file còn sống
@@ -235,6 +281,6 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Auto sync: Lọc bỏ keybox chết, cập nhật danh sách STRONG và hỗ trợ giải mã Base64"
+          git commit -m "Auto sync: Giải mã Base64, chuẩn hóa XML và lọc keybox sống"
           git pull --rebase -X theirs origin main
           git push origin main
