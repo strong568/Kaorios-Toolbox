@@ -119,7 +119,12 @@ jobs:
           for fname, url in SINGLE_SOURCES:
               print(f"--> Kiểm tra nguồn: {fname}")
               try:
-                  res = requests.get(url, timeout=15)
+                  # Thêm headers cho kowx712
+                  headers = {}
+                  if "kowx712.cc" in url:
+                      headers = {'User-Agent': 'TrickyAddon'}
+
+                  res = requests.get(url, headers=headers, timeout=15)
                   if res.status_code == 200:
                       # Xử lý riêng cho trang kowx712 dạng API JSON danh sách
                       if "kowx712.cc" in url:
@@ -130,22 +135,27 @@ jobs:
                               print(f"    [+] Tìm thấy {len(items)} keybox từ kowx712")
                               for idx, item in enumerate(items):
                                   kb_id = item.get("id") or item.get("name", f"item_{idx}")
-                                  xml_content = item.get("xml") or item.get("content")
                                   
-                                  if not xml_content and kb_id:
-                                      detail_url = f"https://keybox.kowx712.cc/api/keybox/{kb_id}"
-                                      detail_res = requests.get(detail_url, timeout=10)
+                                  # Cần gọi API chi tiết với User-Agent để lấy XML
+                                  if kb_id:
+                                      detail_url = f"https://keybox.kowx712.cc/api/keyboxes/{kb_id}"
+                                      detail_res = requests.get(detail_url, headers=headers, timeout=10)
+                                      
                                       if detail_res.status_code == 200:
                                           xml_content = detail_res.text
-                                          
-                                  if xml_content:
-                                      sub_fname = f"kowx712_{kb_id}.xml"
-                                      is_valid, msg = is_keybox_valid(xml_content)
-                                      if is_valid:
-                                          print(f"    [+] STRONG [{sub_fname}]: {msg}")
-                                          valid_keyboxes[sub_fname] = xml_content
+                                          # Kiểm tra xem phản hồi có thực sự là XML hay không
+                                          if xml_content.strip().startswith('<?xml') or xml_content.strip().startswith('<'):
+                                              sub_fname = f"kowx712_{kb_id}.xml"
+                                              is_valid, msg = is_keybox_valid(xml_content)
+                                              if is_valid:
+                                                  print(f"    [+] STRONG [{sub_fname}]: {msg}")
+                                                  valid_keyboxes[sub_fname] = xml_content
+                                              else:
+                                                  print(f"    [-] LOẠI [{sub_fname}]: {msg}")
+                                          else:
+                                              print(f"    [-] LOẠI [{kb_id}]: Nội dung không phải là XML hợp lệ")
                                       else:
-                                          print(f"    [-] LOẠI [{sub_fname}]: {msg}")
+                                          print(f"    [-] Lỗi lấy chi tiết [{kb_id}]: HTTP {detail_res.status_code}")
                           except Exception as e:
                               print(f"    [!] Lỗi phân tích API kowx712: {e}")
                           continue
