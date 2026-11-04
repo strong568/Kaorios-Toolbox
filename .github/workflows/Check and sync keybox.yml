@@ -114,6 +114,7 @@ jobs:
               ("PixelLineage_keybox.xml", "https://raw.githubusercontent.com/PixelLineage/res/main/certified_bundle/keybox.xml"),
               ("loonage_keybox.xml", "https://raw.githubusercontent.com/loonage/ota/los-23/spoofify/keybox.xml"),
               ("PallabKumarS_keybox.xml", "https://raw.githubusercontent.com/PallabKumarS/android-mods/main/modules/playintegrity-trickystore-aio/keybox.xml"),
+               ("DerpFest-AOSP_keybox.xml", "https://raw.githubusercontent.com/DerpFest-AOSP/DerpSite/5abb3046e817417b26e14e39ccf3b6221f2f4afd/public/keybox.xml"),             
               ("EvolutionX_keybox.xml", "https://git.evolution-x.org/EvoX/keybox/raw/branch/main/keybox.xml"),
               ("Sul6666_key.xml", "https://raw.githubusercontent.com/Sul6666/msup/main/key.xml"),
               ("zuri1503_keybox.xml", "https://raw.githubusercontent.com/zuri1503/Toolbox-Database/main/keybox.xml"),
