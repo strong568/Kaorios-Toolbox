@@ -124,6 +124,7 @@ jobs:
               ("dare_devil_ex_keybox.xml", "https://raw.githubusercontent.com/dare-devil-ex/keyboxxBot/main/keybox.xml"),
               ("GreyElaina_kb_b.xml", "https://gist.githubusercontent.com/GreyElaina/2401596f3b8a01f8602768ad5221e2fd/raw/kb_b.xml"),
               ("mywoopies_keystore.xml", "https://raw.githubusercontent.com/mywoopies/mejson/refs/heads/main/keystore.xml"),
+              ("UN1CA-SM7150_keybox.xml", "https://raw.githubusercontent.com/Arnav3078/UN1CA-SM7150/refs/heads/un1ca-5.2.0/target/m51/patches/tweaks/system/etc/security/keybox.xml"),
           ]
 
           # 2. Tải danh sách Google CRL
