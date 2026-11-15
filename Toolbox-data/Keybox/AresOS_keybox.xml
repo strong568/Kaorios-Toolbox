@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <AndroidAttestation>
   <NumberOfKeyboxes>1</NumberOfKeyboxes>
-  <Keybox DeviceID="t.me/keyboxstrong @evokerr">
+  <Keybox DeviceID="Yurikey70. RKP keybox can pass strong integrity. Join my group: t.me/yuriiroot">
     <Key algorithm="ecdsa">
       <PrivateKey format="pem">
 -----BEGIN EC PRIVATE KEY----- MHcCAQEEIJDjpLv/d65QXgXTB5ibqOxpzt7ZcOUIqYWv2Rcyat9noAoGCCqGSM49
@@ -41,7 +41,6 @@ ZWNkNmI0L2NybC5jcmwwCgYIKoZIzj0EAwMDaAAwZQIxANS7GdQmRpdN/939xmNE
 dhy7J88F8fx8O76ui0Oh1uhQWEc7RLlELFVY+lSx4TfIFutO
 -----END CERTIFICATE-----
       </Certificate>
-ZXZva2Vycg
         <Certificate format="pem">
 -----BEGIN CERTIFICATE----- MIICZDCCAeugAwIBAgIRAPLC/gLfzdARgeSj5rNpoowwCgYIKoZIzj0EAwMwUjEc MBoGA1UEAwwTS2V5IEF0dGVzdGF0aW9uIENBMTEQMA4GA1UECwwHQW5kcm9pZDET MBEGA1UECgwKR29vZ2xlIExMQzELMAkGA1UEBhMCVVMwHhcNMjYwMjA5MjAwMTEx
 WhcNMjkwMjA4MjAwMTExWjApMRMwEQYDVQQKEwpHb29nbGUgTExDMRIwEAYDVQQD
