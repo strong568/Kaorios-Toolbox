@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <AndroidAttestation>
   <NumberOfKeyboxes>1</NumberOfKeyboxes>
-  <Keybox DeviceID="t.me/keyboxstrong @evokerr">
+  <Keybox DeviceID="keybox">
     <Key algorithm="ecdsa">
       <PrivateKey format="pem">
 -----BEGIN EC PRIVATE KEY----- MHcCAQEEIPsVQBNRxhVR0kwkeadaL8QDZieic0jz8weij5b2B5CmoAoGCCqGSM49
@@ -42,7 +42,6 @@ MTlmMTMvY3JsLmNybDAKBggqhkjOPQQDAwNnADBkAjBT9DDyv72a2mJyvDMP9+Pw
 fB9it5FO8qq5BEuuzs974adFhhuXyG9bohA7++wwagDMbg==
 -----END CERTIFICATE-----
       </Certificate>
-ZXZva2Vycg
         <Certificate format="pem">
 -----BEGIN CERTIFICATE----- MIICZjCCAeugAwIBAgIRAJJCUBkZA+O6ZTIO/WoghfswCgYIKoZIzj0EAwMwUjEc MBoGA1UEAwwTS2V5IEF0dGVzdGF0aW9uIENBMTEQMA4GA1UECwwHQW5kcm9pZDET MBEGA1UECgwKR29vZ2xlIExMQzELMAkGA1UEBhMCVVMwHhcNMjYwMjA5MTk1OTE4
 WhcNMjkwMjA4MTk1OTE4WjApMRMwEQYDVQQKEwpHb29nbGUgTExDMRIwEAYDVQQD
